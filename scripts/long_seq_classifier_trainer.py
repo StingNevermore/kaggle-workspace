@@ -7,6 +7,7 @@ from typing import Optional
 
 import torch
 from datasets import load_from_disk
+from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 from torch import nn
 from transformers import (
     AutoModel,
@@ -123,8 +124,7 @@ class LongSeqClassifier(nn.Module):
         inputs = {
             k: v for k, v in locals().items() if k in ["input_ids", "attention_mask"]
         }
-        with torch.no_grad():
-            outputs = self.base_model(**inputs).last_hidden_state
+        outputs = self.base_model(**inputs).last_hidden_state
 
         word_lstm_output, _ = self.word_lstm(
             outputs
@@ -159,6 +159,23 @@ class LongSeqClassifier(nn.Module):
 def get_model(base_model_name, num_classes, **kwargs):
     """ "Get a LongSeqClassifier model"""
     base_model = AutoModel.from_pretrained(base_model_name, **kwargs)
+    base_model = prepare_model_for_kbit_training(base_model)
+    lora_config = LoraConfig(
+        r=16,
+        lora_alpha=16,
+        target_modules=[
+            "q_proj",
+            "k_proj",
+            "v_proj",
+            "o_proj",
+            "gate_proj",
+            "up_proj",
+            "down_proj",
+        ],
+        lora_dropout=0.05,
+        modules_to_save=["word_lstm", "sentence_lstm", "classifier"],
+    )
+    base_model = get_peft_model(base_model, lora_config)
     model = LongSeqClassifier(base_model, num_classes)
     return model
 
@@ -210,13 +227,17 @@ def main():
 
     dataset = prepare_dataset(model_args)
 
-    bit_and_byte_config = BitsAndBytesConfig(load_in_8bit=True)
+    bit_and_byte_config = BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_use_double_quant=True,
+        bnb_4bit_compute_dtype=torch.bfloat16,
+    )
     model = get_model(
         model_args.base_model_name,
         model_args.num_classes,
-        torch_dtype=torch.bfloat16,
-        attn_implementation="flash_attention_2",
-        bit_and_byte_config=bit_and_byte_config,
+        # torch_dtype=torch.bfloat16,
+        # attn_implementation="flash_attention_2",
+        quantization_config=bit_and_byte_config,
         device_map="auto",
     )
 

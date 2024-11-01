@@ -5,9 +5,9 @@ PY_SCRIPT=long_seq_classifier_trainer.py
 DATA_DIR=${SCRIPTS_DIR}/../data/llm-classification-finetuning
 DATASET_DIR="$DATA_DIR/dataset_dialog"
 
-base_model_name=google/gemma-2-9b
-identifier=gemma-2-9b-it
-batch_size=4
+base_model_name=meta-llama/Meta-Llama-3-8B
+identifier=Meta-Llama-3-8B-4bit
+batch_size=8
 
 export CUDA_VISIBLE_DEVICES=0
 export MASTER_ADDR=localhost
@@ -37,11 +37,12 @@ torchrun --nnodes 1 --nproc_per_node 1 ${PY_SCRIPT} \
     --weight_decay=0.01 \
     --logging_steps=100 \
     --logging_strategy="steps" \
-    --learning_rate=2e-4 \
+    --learning_rate=1e-4 \
     --lr_scheduler_type="cosine" \
     --warmup_steps=200 \
     --report_to="wandb" \
     --overwrite_output_dir=True \
     --load_best_model_at_end=True \
     --greater_is_better=False \
-    --bf16=True
+    --bf16=True \
+    --ddp_find_unused_parameters=False \
