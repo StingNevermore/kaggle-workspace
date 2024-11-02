@@ -14,7 +14,6 @@ from transformers import (
     AutoTokenizer,
     BitsAndBytesConfig,
     HfArgumentParser,
-    PreTrainedModel,
     Trainer,
     TrainingArguments,
     default_data_collator,
@@ -73,14 +72,14 @@ class LongSeqClassifier(nn.Module):
 
     def __init__(
         self,
-        base_model: PreTrainedModel,
+        base_model,
         num_classes,
         lstm_hidden_size=256,
         dropout=0.5,
     ):
         super().__init__()
         hidden_size = base_model.config.hidden_size
-        self.base_model = base_model
+        self.model = base_model
         self.word_lstm = nn.LSTM(
             input_size=hidden_size,
             hidden_size=lstm_hidden_size,
@@ -113,7 +112,12 @@ class LongSeqClassifier(nn.Module):
         if self.classifier.bias is not None:
             nn.init.uniform_(self.classifier.bias, -0.1, 0.1)
 
-    def forward(self, input_ids, attention_mask, labels=None):
+    def forward(
+        self,
+        input_ids,
+        attention_mask,
+        labels=None,
+    ):
         """
         Forward pass of the model
         """
@@ -124,7 +128,8 @@ class LongSeqClassifier(nn.Module):
         inputs = {
             k: v for k, v in locals().items() if k in ["input_ids", "attention_mask"]
         }
-        outputs = self.base_model(**inputs).last_hidden_state
+        transformer_outputs = self.model(**inputs)
+        outputs = transformer_outputs.last_hidden_state
 
         word_lstm_output, _ = self.word_lstm(
             outputs
@@ -152,14 +157,26 @@ class LongSeqClassifier(nn.Module):
         if labels is not None:
             loss_fn = nn.CrossEntropyLoss()
             loss = loss_fn(logits.view(-1, logits.size(-1)), labels.view(-1))
-            return loss, logits
-        return logits
+
+        return (loss, logits) if loss is not None else logits
 
 
-def get_model(base_model_name, num_classes, **kwargs):
+def get_model(base_model_name, num_classes):
     """ "Get a LongSeqClassifier model"""
-    base_model = AutoModel.from_pretrained(base_model_name, **kwargs)
-    base_model = prepare_model_for_kbit_training(base_model)
+    bit_and_byte_config = BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_use_double_quant=True,
+        bnb_4bit_compute_dtype=torch.bfloat16,
+    )
+    base_model = AutoModel.from_pretrained(
+        base_model_name,
+        quantization_config=bit_and_byte_config,
+        low_cpu_mem_usage=True,
+        torch_dtype=torch.bfloat16,
+    )
+    model = prepare_model_for_kbit_training(
+        base_model, gradient_checkpointing_kwargs={"use_reentrant": False}
+    )
     lora_config = LoraConfig(
         r=16,
         lora_alpha=16,
@@ -175,9 +192,8 @@ def get_model(base_model_name, num_classes, **kwargs):
         lora_dropout=0.05,
         modules_to_save=["word_lstm", "sentence_lstm", "classifier"],
     )
-    base_model = get_peft_model(base_model, lora_config)
     model = LongSeqClassifier(base_model, num_classes)
-    return model
+    return get_peft_model(model, lora_config)
 
 
 def tokenize_function(examples, tokenizer, max_seq_length=512):
@@ -227,18 +243,9 @@ def main():
 
     dataset = prepare_dataset(model_args)
 
-    bit_and_byte_config = BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_use_double_quant=True,
-        bnb_4bit_compute_dtype=torch.bfloat16,
-    )
     model = get_model(
         model_args.base_model_name,
         model_args.num_classes,
-        # torch_dtype=torch.bfloat16,
-        # attn_implementation="flash_attention_2",
-        quantization_config=bit_and_byte_config,
-        device_map="auto",
     )
 
     trainer = Trainer(

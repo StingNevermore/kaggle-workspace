@@ -46,3 +46,4 @@ torchrun --nnodes 1 --nproc_per_node 1 ${PY_SCRIPT} \
     --greater_is_better=False \
     --bf16=True \
     --ddp_find_unused_parameters=False \
+    --label_names="labels" \
