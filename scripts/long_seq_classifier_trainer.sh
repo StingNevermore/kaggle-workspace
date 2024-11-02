@@ -6,8 +6,8 @@ DATA_DIR=${SCRIPTS_DIR}/../data/llm-classification-finetuning
 DATASET_DIR="$DATA_DIR/dataset_dialog"
 
 base_model_name=meta-llama/Meta-Llama-3-8B
-identifier=Meta-Llama-3-8B-4bit-no-lora
-batch_size=8
+identifier=Meta-Llama-3-8B-4bit-lora
+batch_size=4
 
 export CUDA_VISIBLE_DEVICES=0
 export MASTER_ADDR=localhost
@@ -27,7 +27,6 @@ torchrun --nnodes 1 --nproc_per_node 1 ${PY_SCRIPT} \
     --logging_dir="${DATA_DIR}/logs-${identifier}" \
     --eval_strategy="steps" \
     --eval_steps=0.2 \
-    --save_only_model=True \
     --save_steps=0.2 \
     --save_strategy="steps" \
     --save_total_limit=3 \
@@ -47,4 +46,4 @@ torchrun --nnodes 1 --nproc_per_node 1 ${PY_SCRIPT} \
     --bf16=True \
     --ddp_find_unused_parameters=False \
     --label_names="labels" \
-    --use_lora=False \
+    --max_seq_length=512 \

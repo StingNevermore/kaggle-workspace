@@ -136,7 +136,6 @@ class LongSeqClassifier(nn.Module):
             k: v for k, v in locals().items() if k in ["input_ids", "attention_mask"]
         }
         if self.base_model_require_grad:
-            self.model.train()
             transformer_outputs = self.model(**inputs)
         else:
             self.model.eval()
@@ -187,6 +186,7 @@ def get_model(model_args):
         quantization_config=bit_and_byte_config,
         low_cpu_mem_usage=True,
         torch_dtype=torch.bfloat16,
+        # attn_implementation="flash_attention_2",
     )
     base_model = prepare_model_for_kbit_training(
         base_model, gradient_checkpointing_kwargs={"use_reentrant": False}
@@ -194,7 +194,7 @@ def get_model(model_args):
     model = LongSeqClassifier(
         base_model,
         model_args.num_classes,
-        base_model_require_grad=True if not model_args.use_lora else False,
+        base_model_require_grad=True if model_args.use_lora else False,
     )
     if model_args.use_lora:
         lora_config = LoraConfig(
@@ -212,7 +212,9 @@ def get_model(model_args):
             lora_dropout=0.05,
             modules_to_save=["word_lstm", "sentence_lstm", "classifier"],
         )
+        print("Using LoRA")
         return get_peft_model(model, lora_config)
+    print("Using pure model")
     return model
 
 
@@ -262,6 +264,7 @@ def main():
     model_args, training_args = parser.parse_args_into_dataclasses()
 
     dataset = prepare_dataset(model_args)
+    dataset = dataset.shuffle(seed=42)
 
     model = get_model(model_args)
 
