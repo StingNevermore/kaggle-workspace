@@ -64,6 +64,11 @@ class ModelArguments:
         metadata={"help": ("The path to the dataset")},
     )
 
+    use_lora: Optional[bool] = field(
+        default=True,
+        metadata={"help": ("Use LoRA")},
+    )
+
 
 class LongSeqClassifier(nn.Module):
     """
@@ -74,12 +79,14 @@ class LongSeqClassifier(nn.Module):
         self,
         base_model,
         num_classes,
+        base_model_require_grad=True,
         lstm_hidden_size=256,
         dropout=0.5,
     ):
         super().__init__()
         hidden_size = base_model.config.hidden_size
         self.model = base_model
+        self.base_model_require_grad = base_model_require_grad
         self.word_lstm = nn.LSTM(
             input_size=hidden_size,
             hidden_size=lstm_hidden_size,
@@ -128,7 +135,14 @@ class LongSeqClassifier(nn.Module):
         inputs = {
             k: v for k, v in locals().items() if k in ["input_ids", "attention_mask"]
         }
-        transformer_outputs = self.model(**inputs)
+        if self.base_model_require_grad:
+            self.model.train()
+            transformer_outputs = self.model(**inputs)
+        else:
+            self.model.eval()
+            with torch.no_grad():
+                transformer_outputs = self.model(**inputs)
+
         outputs = transformer_outputs.last_hidden_state
 
         word_lstm_output, _ = self.word_lstm(
@@ -161,7 +175,7 @@ class LongSeqClassifier(nn.Module):
         return (loss, logits) if loss is not None else logits
 
 
-def get_model(base_model_name, num_classes):
+def get_model(model_args):
     """ "Get a LongSeqClassifier model"""
     bit_and_byte_config = BitsAndBytesConfig(
         load_in_4bit=True,
@@ -169,31 +183,37 @@ def get_model(base_model_name, num_classes):
         bnb_4bit_compute_dtype=torch.bfloat16,
     )
     base_model = AutoModel.from_pretrained(
-        base_model_name,
+        model_args.base_model_name,
         quantization_config=bit_and_byte_config,
         low_cpu_mem_usage=True,
         torch_dtype=torch.bfloat16,
     )
-    model = prepare_model_for_kbit_training(
+    base_model = prepare_model_for_kbit_training(
         base_model, gradient_checkpointing_kwargs={"use_reentrant": False}
     )
-    lora_config = LoraConfig(
-        r=16,
-        lora_alpha=16,
-        target_modules=[
-            "q_proj",
-            "k_proj",
-            "v_proj",
-            "o_proj",
-            "gate_proj",
-            "up_proj",
-            "down_proj",
-        ],
-        lora_dropout=0.05,
-        modules_to_save=["word_lstm", "sentence_lstm", "classifier"],
+    model = LongSeqClassifier(
+        base_model,
+        model_args.num_classes,
+        base_model_require_grad=True if not model_args.use_lora else False,
     )
-    model = LongSeqClassifier(base_model, num_classes)
-    return get_peft_model(model, lora_config)
+    if model_args.use_lora:
+        lora_config = LoraConfig(
+            r=16,
+            lora_alpha=16,
+            target_modules=[
+                "q_proj",
+                "k_proj",
+                "v_proj",
+                "o_proj",
+                "gate_proj",
+                "up_proj",
+                "down_proj",
+            ],
+            lora_dropout=0.05,
+            modules_to_save=["word_lstm", "sentence_lstm", "classifier"],
+        )
+        return get_peft_model(model, lora_config)
+    return model
 
 
 def tokenize_function(examples, tokenizer, max_seq_length=512):
@@ -243,10 +263,7 @@ def main():
 
     dataset = prepare_dataset(model_args)
 
-    model = get_model(
-        model_args.base_model_name,
-        model_args.num_classes,
-    )
+    model = get_model(model_args)
 
     trainer = Trainer(
         model=model,

@@ -6,7 +6,7 @@ DATA_DIR=${SCRIPTS_DIR}/../data/llm-classification-finetuning
 DATASET_DIR="$DATA_DIR/dataset_dialog"
 
 base_model_name=meta-llama/Meta-Llama-3-8B
-identifier=Meta-Llama-3-8B-4bit
+identifier=Meta-Llama-3-8B-4bit-no-lora
 batch_size=8
 
 export CUDA_VISIBLE_DEVICES=0
@@ -47,3 +47,4 @@ torchrun --nnodes 1 --nproc_per_node 1 ${PY_SCRIPT} \
     --bf16=True \
     --ddp_find_unused_parameters=False \
     --label_names="labels" \
+    --use_lora=False \
