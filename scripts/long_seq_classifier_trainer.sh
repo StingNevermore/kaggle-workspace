@@ -7,7 +7,7 @@ DATASET_DIR="$DATA_DIR/dataset_dialog"
 
 base_model_name=meta-llama/Meta-Llama-3-8B
 identifier=Meta-Llama-3-8B-4bit-lora
-batch_size=4
+batch_size=8
 
 export CUDA_VISIBLE_DEVICES=0
 export MASTER_ADDR=localhost
