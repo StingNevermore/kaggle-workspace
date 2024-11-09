@@ -1,12 +1,13 @@
 """Trainer for LongSeqClassifier"""
 
+import json
 import os
 from dataclasses import dataclass, field
 from functools import partial
 from typing import Optional
 
 import torch
-from datasets import load_from_disk
+from datasets import load_dataset
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 from torch import nn
 from transformers import (
@@ -67,6 +68,11 @@ class ModelArguments:
     use_lora: Optional[bool] = field(
         default=True,
         metadata={"help": ("Use LoRA")},
+    )
+
+    use_4bit: Optional[bool] = field(
+        default=True,
+        metadata={"help": ("Use 4-bit quantization")},
     )
 
 
@@ -176,21 +182,25 @@ class LongSeqClassifier(nn.Module):
 
 def get_model(model_args):
     """ "Get a LongSeqClassifier model"""
-    bit_and_byte_config = BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_use_double_quant=True,
-        bnb_4bit_compute_dtype=torch.bfloat16,
-    )
+    if model_args.use_4bit:
+        bit_and_byte_config = BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_use_double_quant=True,
+            bnb_4bit_compute_dtype=torch.bfloat16,
+        )
+    else:
+        bit_and_byte_config = None
     base_model = AutoModel.from_pretrained(
         model_args.base_model_name,
         quantization_config=bit_and_byte_config,
         low_cpu_mem_usage=True,
         torch_dtype=torch.bfloat16,
-        # attn_implementation="flash_attention_2",
+        attn_implementation="flash_attention_2",
     )
-    base_model = prepare_model_for_kbit_training(
-        base_model, gradient_checkpointing_kwargs={"use_reentrant": False}
-    )
+    if model_args.use_4bit:
+        base_model = prepare_model_for_kbit_training(
+            base_model, gradient_checkpointing_kwargs={"use_reentrant": False}
+        )
     model = LongSeqClassifier(
         base_model,
         model_args.num_classes,
@@ -237,10 +247,70 @@ def tokenize_function(examples, tokenizer, max_seq_length=512):
     return result
 
 
+id2label = {0: "winner_model_a", 1: "winner_model_b", 2: "winner_tie"}
+label2id = {v: k for k, v in id2label.items()}
+
+
+def preprocess_function(examples):
+    prompts = examples["prompt"]
+    response_as = examples["response_a"]
+    response_bs = examples["response_b"]
+    winner_model_a = examples["winner_model_a"]
+    winner_model_b = examples["winner_model_b"]
+    winner_tie = examples["winner_tie"]
+    ids = examples["id"]
+
+    samples = []
+    for (
+        prompt,
+        response_a,
+        response_b,
+        winner_model_a,
+        winner_model_b,
+        winner_tie,
+        id,
+    ) in zip(
+        prompts,
+        response_as,
+        response_bs,
+        winner_model_a,
+        winner_model_b,
+        winner_tie,
+        ids,
+    ):
+        prompt = json.loads(prompt)
+        response_a = json.loads(response_a)
+        response_b = json.loads(response_b)
+        if winner_model_a == 1:
+            label = "winner_model_a"
+        elif winner_model_b == 1:
+            label = "winner_model_b"
+        elif winner_tie == 1:
+            label = "winner_tie"
+        else:
+            raise ValueError("Invalid label")
+
+        prompt = "".join(prompt)
+        response_a = "".join([r if r is not None else "" for r in response_a])
+        response_b = "".join([r if r is not None else "" for r in response_b])
+
+        sentences = [prompt, response_a, response_b]
+        samples.append((id, sentences, label))
+
+    return {
+        "id": [id for id, _, _ in samples],
+        "sentences": [text for _, text, _ in samples],
+        "labels": [label2id[l] for _, _, l in samples],
+    }
+
+
 def prepare_dataset(model_args):
     """Prepare dataset"""
     tokenzier_name = model_args.tokenizer_name or model_args.base_model_name
-    dataset = load_from_disk(model_args.dataset_path)
+    dataset = load_dataset("csv", data_files=model_args.dataset_path)["train"]
+    dataset = dataset.map(
+        preprocess_function, batched=True, remove_columns=dataset.column_names
+    )
     t = AutoTokenizer.from_pretrained(
         tokenzier_name,
         use_fast=True,
@@ -252,9 +322,9 @@ def prepare_dataset(model_args):
         tokenizer=t,
         max_seq_length=model_args.max_seq_length,
     )
-    return dataset.map(
-        tokenizer, batched=True, remove_columns=dataset["train"].column_names
-    )
+    dataset = dataset.map(tokenizer, batched=True, remove_columns=dataset.column_names)
+    dataset = dataset.shuffle(seed=42)
+    return dataset.train_test_split(test_size=0.1)
 
 
 def main():
@@ -264,7 +334,6 @@ def main():
     model_args, training_args = parser.parse_args_into_dataclasses()
 
     dataset = prepare_dataset(model_args)
-    dataset = dataset.shuffle(seed=42)
 
     model = get_model(model_args)
 
@@ -276,8 +345,9 @@ def main():
         data_collator=default_data_collator,
     )
 
-    trainer.train()
-    trainer.save_model(os.path.join(training_args.output_dir, "model"))
+    if training_args.do_train:
+        trainer.train()
+        trainer.save_model(os.path.join(training_args.output_dir, "model"))
 
 
 if __name__ == "__main__":

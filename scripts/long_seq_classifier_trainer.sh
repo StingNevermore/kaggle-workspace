@@ -1,13 +1,39 @@
 #!/bin/bash
 
-SCRIPTS_DIR=$(dirname $(readlink -f "$0"))
-PY_SCRIPT=long_seq_classifier_trainer.py
-DATA_DIR=${SCRIPTS_DIR}/../data/llm-classification-finetuning
-DATASET_DIR="$DATA_DIR/dataset_dialog"
+# ENV_NAME: local, tencent, virtai, default: local
+ENV_NAME=$1
+if [ -z "${ENV_NAME}" ]; then
+    ENV_NAME=local
+fi
 
-base_model_name=meta-llama/Meta-Llama-3-8B
-identifier=Meta-Llama-3-8B-4bit-lora
-batch_size=8
+identifier=llama-3.2-3b-lora
+WANDB_API_KEY=68b48b5fbbb9808a21858dca257cd4d4f699643c
+SCRIPTS_DIR=$(dirname $(readlink -f "$0"))
+PY_SCRIPT=${SCRIPTS_DIR}/long_seq_classifier_trainer.py
+
+if [ "${ENV_NAME}" == "local" ]; then
+    DATA_DIR=${SCRIPTS_DIR}/../data/llm-classification-finetuning
+    DATA_PATH="$DATA_DIR/data_csv/train.csv"
+    BASE_MODEL_NAME=meta-llama/Llama-3.2-3B
+    OUTPUT_DIR=${DATA_DIR}/output-${identifier}
+    LOGS_DIR=${DATA_DIR}/logs-${identifier}
+    batch_size=4
+elif [ "${ENV_NAME}" == "tencent" ]; then
+    OUTPUT_BASE_DIR=/gemini/output
+    DATA_PATH=$GEMINI_DATA_IN1/train.csv
+    LOGS_DIR=${OUTPUT_BASE_DIR}/logs-${identifier}
+    BASE_MODEL_NAME=${$GEMINI_PRETRAIN}
+    TOKENIZER_NAME=${GEMINI_PRETRAIN}
+    OUTPUT_DIR=${OUTPUT_BASE_DIR}/output-${identifier}
+    batch_size=8
+elif [ "${ENV_NAME}" == "tencent" ]; then
+    DATA_PATH=/opt/ml/datasets/train.csv
+    LOGS_DIR=/opt/ml/logs
+    BASE_MODEL_NAME=/opt/ml/pretrained/llama-3-8b
+    TOKENIZER_NAME=/opt/ml/pretrained/llama-3-8b-tokenizer
+    OUTPUT_DIR=/opt/ml/output
+    batch_size=4
+fi
 
 export CUDA_VISIBLE_DEVICES=0
 export MASTER_ADDR=localhost
@@ -16,15 +42,17 @@ export RANK=0
 export LOCAL_RANK=0
 export WORLD_SIZE=1
 export WANDB_PROJECT=long_seq_classifier_train
-export WANDB_DIR=$DATA_DIR
+export WANDB_DIR=${LOGS_DIR}
 
-torchrun --nnodes 1 --nproc_per_node 1 ${PY_SCRIPT} \
-    --base_model_name=${base_model_name} \
+accelerate launch --config_file ${SCRIPTS_DIR}/default_deepseepd_config.yaml ${PY_SCRIPT} \
+    --do_train=True \
+    --base_model_name=${BASE_MODEL_NAME} \
+    --tokenizer_name=${TOKENIZER_NAME} \
     --num_classes=3 \
-    --dataset_path=${DATASET_DIR} \
+    --dataset_path=${DATA_PATH} \
     --run_name="run-${identifier}" \
-    --output_dir="${DATA_DIR}/output-${identifier}" \
-    --logging_dir="${DATA_DIR}/logs-${identifier}" \
+    --output_dir=${OUTPUT_DIR} \
+    --logging_dir="${LOGS_DIR}" \
     --eval_strategy="steps" \
     --eval_steps=0.2 \
     --save_steps=0.2 \
@@ -39,7 +67,8 @@ torchrun --nnodes 1 --nproc_per_node 1 ${PY_SCRIPT} \
     --learning_rate=1e-4 \
     --lr_scheduler_type="cosine" \
     --warmup_steps=200 \
-    --report_to="wandb" \
+    --report_to=tensorboard \
+    --report_to=wandb \
     --overwrite_output_dir=True \
     --load_best_model_at_end=True \
     --greater_is_better=False \
@@ -47,3 +76,5 @@ torchrun --nnodes 1 --nproc_per_node 1 ${PY_SCRIPT} \
     --ddp_find_unused_parameters=False \
     --label_names="labels" \
     --max_seq_length=512 \
+    --use_4bit=False \
+    --use_lora=True \
