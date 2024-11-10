@@ -8,7 +8,7 @@ dataset_dir="${base_dir}/datasets/llm-classification"
 data_dir="${base_dir}/train-${identifier}"
 logs_dir="/root/tf-logs/logs/${identifier}"
 
-accelerate launch --config_file default_deepspeed_config.json lstm_text_classifier.py \
+accelerate launch --config_file default_deepspeed_config.yaml lstm_text_classifier.py \
     --base_model_name_or_path "${model_name_or_path}" \
     --tokenizer_name_or_path "${tokenizer_name_or_path}" \
     --dataset_dir "${dataset_dir}" \
