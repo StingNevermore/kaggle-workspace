@@ -300,7 +300,7 @@ def main():
     parser = HfArgumentParser((ModelArguments, TrainingArguments))
     model_args, training_args = parser.parse_args_into_dataclasses()
 
-    accelerator = Accelerator(project_dir=training_args.logging_dir, log_with=["all"])
+    accelerator = Accelerator(project_dir=training_args.logs_dir, log_with=["all"])
 
     dataset = prepare_dataset(
         model_args.dataset_path,
