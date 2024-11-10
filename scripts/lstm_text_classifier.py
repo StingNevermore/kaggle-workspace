@@ -197,12 +197,13 @@ def training_loop(
     training_args: TrainingArguments,
 ):
     metric = evaluate.load("accuracy")
-    progress_bar = get_progress_bar(
-        total_steps=len(train_dataloader) * training_args.num_train_epochs,
-        desc=f"Epoch {training_args.num_train_epochs + 1}/{training_args.num_train_epochs}",
-        accelerator=accelerator,
-    )
+    torch.cuda.empty_cache()
     for epoch in range(training_args.num_train_epochs):
+        progress_bar = get_progress_bar(
+            total_steps=len(train_dataloader) * training_args.num_train_epochs,
+            desc=f"Epoch {epoch + 1}/{training_args.num_train_epochs}",
+            accelerator=accelerator,
+        )
         model.train()
         total_steps = len(train_dataloader) * training_args.num_train_epochs
         total_train_loss = 0
@@ -248,6 +249,7 @@ def training_loop(
                 )
             if (step + 1) % 100 == 0:
                 torch.cuda.empty_cache()
+            progress_bar.close()
     accelerator.end_training()
 
 
