@@ -125,7 +125,7 @@ class TrainingArguments:
         metadata={"help": "The random seed"},
     )
 
-    mini_dataset_test_size: Optional[int] = field(
+    mini_dataset_test_size: Optional[float] = field(
         default=None,
         metadata={"help": "The size of the mini dataset for testing"},
     )
