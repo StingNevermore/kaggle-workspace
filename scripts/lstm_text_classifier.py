@@ -162,15 +162,9 @@ def prepare_dataloader(dataset: Dataset, train_batch_size: int, eval_batch_size:
 
 def prepare_model(model_args: ModelArguments):
     """Prepare the model"""
-    with init_empty_weights():
-        base_model = AutoModel.from_pretrained(
-            model_args.base_model_name_or_path,
-            torch_dtype=torch.bfloat16,
-        )
-    base_model = load_checkpoint_and_dispatch(
-        base_model,
+    base_model = AutoModel.from_pretrained(
         model_args.base_model_name_or_path,
-        device_map="auto",
+        torch_dtype=torch.bfloat16,
     )
     base_model = base_model.gradient_checkpointing_enable()
     model = LstmTextClassifier(
