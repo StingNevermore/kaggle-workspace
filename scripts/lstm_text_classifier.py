@@ -133,7 +133,7 @@ def prepare_dataset(
     max_seq_length: int,
     accelerator: Accelerator,
     seed: int,
-    mini_dataset_test_size: Optional[int],
+    mini_dataset_test_size: Optional[float],
 ):
     """Prepare the dataset"""
     dataset = load_dataset("csv", data_files=os.path.join(dataset_dir, "*.csv"))
@@ -328,6 +328,7 @@ def main():
         model_args.max_seq_length,
         accelerator,
         training_args.seed,
+        training_args.mini_dataset_test_size,
     )
 
     train_dataloader, eval_dataloader = prepare_dataloader(
