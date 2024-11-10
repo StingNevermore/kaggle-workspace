@@ -3,7 +3,7 @@ import os
 from functools import partial
 
 import torch
-from accelerate import Accelerator, init_empty_weights, load_checkpoint_and_dispatch
+from accelerate import Accelerator
 from accelerate.utils import DummyOptim, DummyScheduler, set_seed
 from args.lstm_text_classifier_args import ModelArguments, TrainingArguments
 from datasets import Dataset, load_dataset
@@ -243,12 +243,10 @@ def training_loop(
                         "lr": f"{lr_scheduler.get_last_lr()[0]:.2e}",
                     }
                 )
-            save_steps = handle_steps(training_args.save_steps, total_steps)
-            if (step + 1) % save_steps == 0:
-                accelerator.save_state(training_args.output_dir)
             eval_steps = handle_steps(training_args.eval_steps, total_steps)
             if (step + 1) % eval_steps == 0:
                 eval_loop(model, eval_dataloader, accelerator, (step + 1) / eval_steps)
+                accelerator.save_state(training_args.output_dir)
             if (step + 1) % 100 == 0:
                 torch.cuda.empty_cache()
             progress_bar.close()
