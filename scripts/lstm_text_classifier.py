@@ -254,6 +254,11 @@ def training_loop(
 
 def eval_loop(model, eval_dataloader: DataLoader, accelerator: Accelerator, eval_step):
     model.eval()
+    progress_bar = get_progress_bar(
+        total_steps=len(eval_dataloader),
+        desc=f"Eval Step {eval_step}",
+        accelerator=accelerator,
+    )
     total_eval_loss = 0
     for batch in eval_dataloader:
         batch = {k: v.to(accelerator.device) for k, v in batch.items()}
@@ -261,15 +266,16 @@ def eval_loop(model, eval_dataloader: DataLoader, accelerator: Accelerator, eval
             outputs = model(**batch)
         logits = outputs.logits
         logits, labels = accelerator.gather_for_metrics((logits, batch["labels"]))
-        total_eval_loss += accelerator.reduce(outputs.loss, reduction="mean").item()
+        total_eval_loss += accelerator.reduce(outputs.loss.detach().clone(), reduction="mean").item()
+        progress_bar.update()
     accelerator.log(
         {
-            "eval_accuracy": log_loss(logits.softmax(dim=-1), labels),
+            "eval_accuracy": log_loss(logits.softmax(dim=-1).cpu().numpy(), labels.cpu().numpy()),
             "eval_loss": total_eval_loss / len(eval_dataloader),
         },
         step=eval_step,
     )
-
+    progress_bar.close()
 
 def get_progress_bar(total_steps, desc, accelerator):
     progress_bar_format = (
@@ -296,7 +302,7 @@ def main():
     parser = HfArgumentParser((ModelArguments, TrainingArguments))
     model_args, training_args = parser.parse_args_into_dataclasses()
 
-    accelerator = Accelerator(project_dir=training_args.logs_dir, log_with=["all"])
+    accelerator = Accelerator(project_dir=training_args.logs_dir, log_with=["tensorboard"])
 
     dataset = prepare_dataset(
         training_args.dataset_dir,
