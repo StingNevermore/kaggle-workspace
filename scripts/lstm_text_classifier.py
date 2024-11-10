@@ -215,9 +215,9 @@ def training_loop(
             desc=f"Epoch {epoch + 1}/{training_args.num_train_epochs}",
             accelerator=accelerator,
         )
-        model.train()
         total_steps = len(train_dataloader) * training_args.num_train_epochs
         for step, batch in enumerate(train_dataloader):
+            model.train()
             batch = {k: v.to(accelerator.device) for k, v in batch.items()}
             outputs = model(**batch)
             loss = outputs.loss
@@ -255,6 +255,7 @@ def training_loop(
                 accelerator.save_state(training_args.output_dir)
             if (step + 1) % 100 == 0:
                 torch.cuda.empty_cache()
+                torch.cuda.synchronize()
         progress_bar.close()
     accelerator.end_training()
 
@@ -281,6 +282,8 @@ def eval_loop(model, eval_dataloader: DataLoader, accelerator: Accelerator, eval
     )
     if accelerator.is_main_process:
         print(f"Eval Step {eval_step}, Loss {total_eval_loss / len(eval_dataloader)}")
+    torch.cuda.empty_cache()
+    torch.cuda.synchronize()
     progress_bar.close()
 
 
