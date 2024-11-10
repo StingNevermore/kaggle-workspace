@@ -210,13 +210,11 @@ def training_loop(
         )
         model.train()
         total_steps = len(train_dataloader) * training_args.num_train_epochs
-        total_train_loss = 0
         for step, batch in enumerate(train_dataloader):
             batch = {k: v.to(accelerator.device) for k, v in batch.items()}
             outputs = model(**batch)
             loss = outputs.loss
             loss = loss / training_args.gradient_accumulation_steps
-            total_train_loss += loss.item()
             accelerator.backward(loss)
             if (step + 1) % training_args.gradient_accumulation_steps == 0:
                 if accelerator.sync_gradients:
@@ -227,19 +225,20 @@ def training_loop(
                 lr_scheduler.step()
                 optimizer.zero_grad()
             logging_steps = handle_steps(training_args.logging_steps, total_steps)
+            step_loss = accelerator.reduce(loss.detach().clone(), reduction="mean").item()
             if (step + 1) % logging_steps == 0:
                 print(
-                    f"Epoch {epoch}, Step {step}, Loss {total_train_loss / logging_steps}"
+                    f"Epoch {epoch}, Step {step + 1}, Loss {step_loss}"
                 )
                 accelerator.log(
-                    {"train_loss": total_train_loss / logging_steps},
+                    {"train_loss": step_loss},
                     step=step,
                 )
             progress_bar.update()
             if accelerator.is_local_main_process:
                 progress_bar.set_postfix(
                     {
-                        "loss": f"{total_train_loss / logging_steps:.4f}",
+                        "loss": f"{step_loss:.4f}",
                         "lr": f"{lr_scheduler.get_last_lr()[0]:.2e}",
                     }
                 )
@@ -249,14 +248,14 @@ def training_loop(
                 accelerator.save_state(training_args.output_dir)
             if (step + 1) % 100 == 0:
                 torch.cuda.empty_cache()
-            progress_bar.close()
+        progress_bar.close()
     accelerator.end_training()
 
 
 def eval_loop(model, eval_dataloader: DataLoader, accelerator: Accelerator, eval_step):
     model.eval()
     total_eval_loss = 0
-    for batch in enumerate(eval_dataloader):
+    for batch in eval_dataloader:
         batch = {k: v.to(accelerator.device) for k, v in batch.items()}
         with torch.no_grad():
             outputs = model(**batch)

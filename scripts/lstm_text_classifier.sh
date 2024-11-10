@@ -8,7 +8,7 @@ dataset_dir="${base_dir}/datasets/llm-classification"
 data_dir="${base_dir}/train-${identifier}"
 logs_dir="/root/tf-logs/logs/${identifier}"
 scripts_dir=$(dirname $(readlink -f "$0"))
-batch_size=1
+batch_size=8
 
 export CUDA_VISIBLE_DEVICES="0,1"
 
@@ -24,4 +24,5 @@ accelerate launch --config_file ${scripts_dir}/default_deepseepd_config.yaml ${s
     --num_train_epochs 1 \
     --data_dir "${data_dir}" \
     --logs_dir "${logs_dir}" \
-    --identifier "${identifier}"
+    --identifier "${identifier}" \
+    --eval_steps 0.1 \
