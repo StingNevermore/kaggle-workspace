@@ -7,6 +7,7 @@ from functools import partial
 from typing import Optional
 
 import torch
+from accelerate import Accelerator
 from datasets import load_dataset
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 from torch import nn
@@ -173,6 +174,7 @@ class LongSeqClassifier(nn.Module):
         finnal_output = self.dropout(sentence_lstm_output[:, -1, :])
         logits = self.classifier(finnal_output)
 
+        loss = None
         if labels is not None:
             loss_fn = nn.CrossEntropyLoss()
             loss = loss_fn(logits.view(-1, logits.size(-1)), labels.view(-1))
@@ -193,9 +195,7 @@ def get_model(model_args):
     base_model = AutoModel.from_pretrained(
         model_args.base_model_name,
         quantization_config=bit_and_byte_config,
-        low_cpu_mem_usage=True,
         torch_dtype=torch.bfloat16,
-        attn_implementation="flash_attention_2",
     )
     if model_args.use_4bit:
         base_model = prepare_model_for_kbit_training(
@@ -311,10 +311,7 @@ def prepare_dataset(model_args):
     dataset = dataset.map(
         preprocess_function, batched=True, remove_columns=dataset.column_names
     )
-    t = AutoTokenizer.from_pretrained(
-        tokenzier_name,
-        use_fast=True,
-    )
+    t = AutoTokenizer.from_pretrained(tokenzier_name, use_fast=False)
     if t.pad_token is None:
         t.pad_token = t.eos_token
     tokenizer = partial(
@@ -332,6 +329,7 @@ def main():
     parser = HfArgumentParser((ModelArguments, TrainingArguments))
     # pylint: disable-next=unbalanced-tuple-unpacking
     model_args, training_args = parser.parse_args_into_dataclasses()
+    accelerator = Accelerator()
 
     dataset = prepare_dataset(model_args)
 
@@ -347,7 +345,8 @@ def main():
 
     if training_args.do_train:
         trainer.train()
-        trainer.save_model(os.path.join(training_args.output_dir, "model"))
+        if accelerator.is_main_process:
+            trainer.save_model(os.path.join(training_args.output_dir, "model"))
 
 
 if __name__ == "__main__":

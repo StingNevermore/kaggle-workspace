@@ -18,12 +18,13 @@ if [ "${ENV_NAME}" == "local" ]; then
     OUTPUT_DIR=${DATA_DIR}/output-${identifier}
     LOGS_DIR=${DATA_DIR}/logs-${identifier}
     batch_size=4
-elif [ "${ENV_NAME}" == "tencent" ]; then
+elif [ "${ENV_NAME}" == "virtai" ]; then
+    export CUDA_VISIBLE_DEVICES=0,1
     OUTPUT_BASE_DIR=/gemini/output
-    DATA_PATH=$GEMINI_DATA_IN1/train.csv
+    DATA_PATH=${GEMINI_DATA_IN1}/train.csv
     LOGS_DIR=${OUTPUT_BASE_DIR}/logs-${identifier}
-    BASE_MODEL_NAME=${$GEMINI_PRETRAIN}
-    TOKENIZER_NAME=${GEMINI_PRETRAIN}
+    BASE_MODEL_NAME=${GEMINI_PRETRAIN}
+    TOKENIZER_NAME=${GEMINI_PRETRAIN2}
     OUTPUT_DIR=${OUTPUT_BASE_DIR}/output-${identifier}
     batch_size=8
 elif [ "${ENV_NAME}" == "tencent" ]; then
@@ -35,7 +36,6 @@ elif [ "${ENV_NAME}" == "tencent" ]; then
     batch_size=4
 fi
 
-export CUDA_VISIBLE_DEVICES=0
 export MASTER_ADDR=localhost
 export MASTER_PORT=9994
 export RANK=0
@@ -53,7 +53,7 @@ accelerate launch --config_file ${SCRIPTS_DIR}/default_deepseepd_config.yaml ${P
     --run_name="run-${identifier}" \
     --output_dir=${OUTPUT_DIR} \
     --logging_dir="${LOGS_DIR}" \
-    --eval_strategy="steps" \
+    --evaluation_strategy="steps" \
     --eval_steps=0.2 \
     --save_steps=0.2 \
     --save_strategy="steps" \
