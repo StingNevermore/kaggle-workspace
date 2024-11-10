@@ -281,8 +281,8 @@ def eval_loop(model, eval_dataloader: DataLoader, accelerator: Accelerator, eval
     accelerator.log(
         {
             "eval_accuracy": log_loss(
-                logits.softmax(dim=-1).float().cpu().numpy(),
                 labels.cpu().numpy(),
+                logits.softmax(dim=-1).float().cpu().numpy(),
             ),
             "eval_loss": total_eval_loss / len(eval_dataloader),
         },
