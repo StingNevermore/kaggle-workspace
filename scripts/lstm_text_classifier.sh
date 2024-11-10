@@ -7,8 +7,9 @@ tokenizer_name_or_path="${base_dir}/pretrained/llama-3-8b"
 dataset_dir="${base_dir}/datasets/llm-classification"
 data_dir="${base_dir}/train-${identifier}"
 logs_dir="/root/tf-logs/logs/${identifier}"
+scripts_dir=$(dirname $(readlink -f "$0"))
 
-accelerate launch --config_file default_deepspeed_config.yaml lstm_text_classifier.py \
+accelerate launch --config_file ${scripts_dir}/default_deepseepd_config.yaml ${scripts_dir}/lstm_text_classifier.py \
     --base_model_name_or_path "${model_name_or_path}" \
     --tokenizer_name_or_path "${tokenizer_name_or_path}" \
     --dataset_dir "${dataset_dir}" \
