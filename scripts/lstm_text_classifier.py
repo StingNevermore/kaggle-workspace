@@ -170,8 +170,8 @@ def prepare_model(model_args: ModelArguments):
         base_model_require_grad=True,
     )
     lora_config = LoraConfig(
-        r=model_args.lora_r,
-        lora_alpha=model_args.lora_alpha,
+        r=model_args.base_model_lora_r,
+        lora_alpha=model_args.base_model_lora_alpha,
         target_modules=[
             "q_proj",
             "k_proj",
@@ -181,7 +181,7 @@ def prepare_model(model_args: ModelArguments):
             "up_proj",
             "down_proj",
         ],
-        lora_dropout=model_args.lora_dropout,
+        lora_dropout=model_args.base_model_lora_dropout,
         modules_to_save=["word_lstm", "sentence_lstm", "classifier"],
     )
     return get_peft_model(model, lora_config)
