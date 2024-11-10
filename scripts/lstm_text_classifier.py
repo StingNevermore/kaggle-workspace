@@ -4,7 +4,8 @@ from functools import partial
 
 import evaluate
 import torch
-from accelerate import Accelerator, DummyOptim, DummyScheduler
+from accelerate import Accelerator
+from accelerate.utils import DummyOptim, DummyScheduler, set_seed
 from args.lstm_text_classifier_args import ModelArguments, TrainingArguments
 from datasets import Dataset, load_dataset
 from models.LstmTextClassifier import LstmTextClassifier
@@ -18,7 +19,6 @@ from transformers import (
     HfArgumentParser,
     default_data_collator,
     get_cosine_schedule_with_warmup,
-    set_seed,
 )
 
 id2label = {0: "winner_model_a", 1: "winner_model_b", 2: "winner_tie"}
