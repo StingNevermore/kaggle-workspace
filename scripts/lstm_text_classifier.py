@@ -225,11 +225,11 @@ def training_loop(
                 lr_scheduler.step()
                 optimizer.zero_grad()
             logging_steps = handle_steps(training_args.logging_steps, total_steps)
-            step_loss = accelerator.reduce(loss.detach().clone(), reduction="mean").item()
+            step_loss = accelerator.reduce(
+                loss.detach().clone(), reduction="mean"
+            ).item()
             if (step + 1) % logging_steps == 0:
-                print(
-                    f"Epoch {epoch}, Step {step + 1}, Loss {step_loss}"
-                )
+                print(f"Epoch {epoch}, Step {step + 1}, Loss {step_loss}")
                 accelerator.log(
                     {"train_loss": step_loss},
                     step=step,
@@ -266,16 +266,22 @@ def eval_loop(model, eval_dataloader: DataLoader, accelerator: Accelerator, eval
             outputs = model(**batch)
         logits = outputs.logits
         logits, labels = accelerator.gather_for_metrics((logits, batch["labels"]))
-        total_eval_loss += accelerator.reduce(outputs.loss.detach().clone(), reduction="mean").item()
+        total_eval_loss += accelerator.reduce(
+            outputs.loss.detach().clone(), reduction="mean"
+        ).item()
         progress_bar.update()
     accelerator.log(
         {
-            "eval_accuracy": log_loss(logits.softmax(dim=-1).cpu().numpy(), labels.cpu().numpy()),
+            "eval_accuracy": log_loss(
+                logits.softmax(dim=-1).float().cpu().numpy(),
+                labels.cpu().numpy(),
+            ),
             "eval_loss": total_eval_loss / len(eval_dataloader),
         },
         step=eval_step,
     )
     progress_bar.close()
+
 
 def get_progress_bar(total_steps, desc, accelerator):
     progress_bar_format = (
@@ -302,7 +308,9 @@ def main():
     parser = HfArgumentParser((ModelArguments, TrainingArguments))
     model_args, training_args = parser.parse_args_into_dataclasses()
 
-    accelerator = Accelerator(project_dir=training_args.logs_dir, log_with=["tensorboard"])
+    accelerator = Accelerator(
+        project_dir=training_args.logs_dir, log_with=["tensorboard"]
+    )
 
     dataset = prepare_dataset(
         training_args.dataset_dir,
