@@ -334,7 +334,7 @@ def main():
     parser = HfArgumentParser((ModelArguments, TrainingArguments))
     # pylint: disable-next=unbalanced-tuple-unpacking
     model_args, training_args = parser.parse_args_into_dataclasses()
-    deepspeed_plugin = DeepSpeedPlugin(config=model_args.deepspeed_config_file)
+    deepspeed_plugin = DeepSpeedPlugin(hf_ds_config=model_args.deepspeed_config_file)
     accelerator = Accelerator(deepspeed_plugin=deepspeed_plugin)
 
     dataset = prepare_dataset(model_args)
