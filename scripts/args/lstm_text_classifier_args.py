@@ -125,6 +125,11 @@ class TrainingArguments:
         metadata={"help": "The random seed"},
     )
 
+    mini_dataset_test_size: Optional[int] = field(
+        default=None,
+        metadata={"help": "The size of the mini dataset for testing"},
+    )
+
     def __post_init__(self):
         if self.output_dir is None:
             self.output_dir = os.path.join(

@@ -1,6 +1,7 @@
 import json
 import os
 from functools import partial
+from typing import Optional
 
 import torch
 from accelerate import Accelerator
@@ -132,6 +133,7 @@ def prepare_dataset(
     max_seq_length: int,
     accelerator: Accelerator,
     seed: int,
+    mini_dataset_test_size: Optional[int],
 ):
     """Prepare the dataset"""
     dataset = load_dataset("csv", data_files=os.path.join(dataset_dir, "*.csv"))
@@ -139,6 +141,14 @@ def prepare_dataset(
     dataset = preprocess_dataset(
         dataset, tokenizer_name_or_path, max_seq_length, accelerator, seed
     )
+    if (
+        mini_dataset_test_size is not None
+        and mini_dataset_test_size > 0
+        and mini_dataset_test_size < 1
+    ):
+        dataset = dataset["train"].shard(
+            num_shards=int(1 / mini_dataset_test_size), index=1
+        )
     return dataset.train_test_split(test_size=0.1, seed=seed)
 
 
