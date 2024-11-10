@@ -27,7 +27,7 @@
     },
 
     "zero_optimization": {
-        "stage": 1,
+        "stage": 3,
         "overlap_comm": true,
         "contiguous_gradients": true,
         "sub_group_size": 1e9,
