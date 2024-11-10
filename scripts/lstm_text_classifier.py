@@ -207,7 +207,7 @@ def training_loop(
         total_steps = len(train_dataloader) * training_args.num_train_epochs
         total_train_loss = 0
         for step, batch in enumerate(train_dataloader):
-            batch = batch.to(accelerator.device)
+            batch = {k: v.to(accelerator.device) for k, v in batch.items()}
             outputs = model(**batch)
             loss = outputs.loss
             loss = loss / training_args.gradient_accumulation_steps
@@ -257,7 +257,7 @@ def eval_loop(
     model.eval()
     total_eval_loss = 0
     for batch in enumerate(eval_dataloader):
-        batch = batch.to(accelerator.device)
+        batch = {k: v.to(accelerator.device) for k, v in batch.items()}
         with torch.no_grad():
             outputs = model(**batch)
         logits = outputs.logits
