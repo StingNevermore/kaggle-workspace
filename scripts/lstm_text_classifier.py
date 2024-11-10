@@ -148,12 +148,14 @@ def prepare_dataloader(dataset: Dataset, train_batch_size: int, eval_batch_size:
         batch_size=train_batch_size,
         shuffle=True,
         collate_fn=default_data_collator,
+        pin_memory=True,
     )
     eval_dataloader = DataLoader(
         dataset["test"],
         batch_size=eval_batch_size,
         shuffle=False,
         collate_fn=default_data_collator,
+        pin_memory=True,
     )
     return train_dataloader, eval_dataloader
 
@@ -198,6 +200,7 @@ def training_loop(
 ):
     metric = evaluate.load("accuracy")
     torch.cuda.empty_cache()
+    print(f"Training {training_args.num_train_epochs} epochs")
     for epoch in range(training_args.num_train_epochs):
         progress_bar = get_progress_bar(
             total_steps=len(train_dataloader) * training_args.num_train_epochs,
