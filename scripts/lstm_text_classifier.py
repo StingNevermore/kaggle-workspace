@@ -303,8 +303,8 @@ def main():
     accelerator = Accelerator(project_dir=training_args.logs_dir, log_with=["all"])
 
     dataset = prepare_dataset(
-        model_args.dataset_dir,
-        model_args.tokenizer_name,
+        training_args.dataset_dir,
+        model_args.tokenizer_name_or_path,
         model_args.max_seq_length,
         accelerator,
         training_args.seed,
