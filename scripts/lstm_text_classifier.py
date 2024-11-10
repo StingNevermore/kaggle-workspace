@@ -146,9 +146,7 @@ def prepare_dataset(
         and mini_dataset_test_size > 0
         and mini_dataset_test_size < 1
     ):
-        dataset = dataset["train"].shard(
-            num_shards=int(1 / mini_dataset_test_size), index=1
-        )
+        dataset = dataset.shard(num_shards=int(1 / mini_dataset_test_size), index=1)
     return dataset.train_test_split(test_size=0.1, seed=seed)
 
 
