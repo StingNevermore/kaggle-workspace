@@ -166,7 +166,7 @@ def prepare_model(model_args: ModelArguments):
         model_args.base_model_name_or_path,
         torch_dtype=torch.bfloat16,
     )
-    base_model = base_model.gradient_checkpointing_enable()
+    base_model.gradient_checkpointing_enable()
     model = LstmTextClassifier(
         base_model,
         model_args.num_classes,
