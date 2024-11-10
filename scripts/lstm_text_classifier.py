@@ -3,7 +3,7 @@ import os
 from functools import partial
 
 import torch
-from accelerate import Accelerator
+from accelerate import Accelerator, init_empty_weights, load_checkpoint_and_dispatch
 from accelerate.utils import DummyOptim, DummyScheduler, set_seed
 from args.lstm_text_classifier_args import ModelArguments, TrainingArguments
 from datasets import Dataset, load_dataset
@@ -162,10 +162,17 @@ def prepare_dataloader(dataset: Dataset, train_batch_size: int, eval_batch_size:
 
 def prepare_model(model_args: ModelArguments):
     """Prepare the model"""
-    base_model = AutoModel.from_pretrained(
+    with init_empty_weights():
+        base_model = AutoModel.from_pretrained(
+            model_args.base_model_name_or_path,
+            torch_dtype=torch.bfloat16,
+        )
+    base_model = load_checkpoint_and_dispatch(
+        base_model,
         model_args.base_model_name_or_path,
-        torch_dtype=torch.bfloat16,
+        device_map="auto",
     )
+    base_model = base_model.gradient_checkpointing_enable()
     model = LstmTextClassifier(
         base_model,
         model_args.num_classes,
@@ -199,6 +206,7 @@ def training_loop(
     training_args: TrainingArguments,
 ):
     torch.cuda.empty_cache()
+    torch.cuda.synchronize()
     print(f"Training {training_args.num_train_epochs} epochs")
     for epoch in range(training_args.num_train_epochs):
         progress_bar = get_progress_bar(
@@ -316,7 +324,6 @@ def main():
     set_seed(training_args.seed)
 
     model = prepare_model(model_args)
-    model = model.to(accelerator.device)
 
     optimizer_cls = (
         AdamW
