@@ -76,6 +76,11 @@ class ModelArguments:
         metadata={"help": ("Use 4-bit quantization")},
     )
 
+    deepspeed_config_file: Optional[str] = field(
+        default=None,
+        metadata={"help": ("The path to the DeepSpeed config file")},
+    )
+
 
 class LongSeqClassifier(nn.Module):
     """
