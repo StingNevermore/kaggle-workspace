@@ -311,7 +311,9 @@ def main():
     )
 
     train_dataloader, eval_dataloader = prepare_dataloader(
-        dataset, training_args.train_batch_size, training_args.eval_batch_size
+        dataset,
+        training_args.per_device_train_batch_size,
+        training_args.per_device_eval_batch_size,
     )
 
     set_seed(training_args.seed)
