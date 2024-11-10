@@ -2,7 +2,6 @@ import json
 import os
 from functools import partial
 
-import evaluate
 import torch
 from accelerate import Accelerator
 from accelerate.utils import DummyOptim, DummyScheduler, set_seed
@@ -10,6 +9,7 @@ from args.lstm_text_classifier_args import ModelArguments, TrainingArguments
 from datasets import Dataset, load_dataset
 from models.LstmTextClassifier import LstmTextClassifier
 from peft import LoraConfig, get_peft_model
+from sklearn.metrics import log_loss
 from torch.optim import AdamW
 from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
@@ -198,7 +198,6 @@ def training_loop(
     accelerator: Accelerator,
     training_args: TrainingArguments,
 ):
-    metric = evaluate.load("accuracy")
     torch.cuda.empty_cache()
     print(f"Training {training_args.num_train_epochs} epochs")
     for epoch in range(training_args.num_train_epochs):
@@ -247,18 +246,14 @@ def training_loop(
                 accelerator.save_state(training_args.output_dir)
             eval_steps = handle_steps(training_args.eval_steps, total_steps)
             if (step + 1) % eval_steps == 0:
-                eval_loop(
-                    model, eval_dataloader, accelerator, metric, (step + 1) / eval_steps
-                )
+                eval_loop(model, eval_dataloader, accelerator, (step + 1) / eval_steps)
             if (step + 1) % 100 == 0:
                 torch.cuda.empty_cache()
             progress_bar.close()
     accelerator.end_training()
 
 
-def eval_loop(
-    model, eval_dataloader: DataLoader, accelerator: Accelerator, metric, eval_step
-):
+def eval_loop(model, eval_dataloader: DataLoader, accelerator: Accelerator, eval_step):
     model.eval()
     total_eval_loss = 0
     for batch in enumerate(eval_dataloader):
@@ -267,13 +262,10 @@ def eval_loop(
             outputs = model(**batch)
         logits = outputs.logits
         logits, labels = accelerator.gather_for_metrics((logits, batch["labels"]))
-        predictions = torch.argmax(logits, dim=-1)
-        metric.add_batch(predictions=predictions, references=labels)
-        eval_metric = metric.compute()
         total_eval_loss += accelerator.reduce(outputs.loss, reduction="mean").item()
     accelerator.log(
         {
-            "eval_accuracy": eval_metric["accuracy"],
+            "eval_accuracy": log_loss(logits.softmax(dim=-1), labels),
             "eval_loss": total_eval_loss / len(eval_dataloader),
         },
         step=eval_step,
