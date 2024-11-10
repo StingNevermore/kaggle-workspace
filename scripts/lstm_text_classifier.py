@@ -342,8 +342,8 @@ def main():
     else:
         lr_scheduler = DummyScheduler(
             optimizer,
-            total_num_steps=training_args.max_train_steps,
-            warmup_num_steps=training_args.num_warmup_steps,
+            total_num_steps=(len(train_dataloader) * training_args.num_train_epochs),
+            warmup_num_steps=200,
         )
 
     model, optimizer, train_dataloader, eval_dataloader, lr_scheduler = (
