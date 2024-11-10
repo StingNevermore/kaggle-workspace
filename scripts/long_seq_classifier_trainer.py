@@ -7,7 +7,7 @@ from functools import partial
 from typing import Optional
 
 import torch
-from accelerate import Accelerator
+from accelerate import Accelerator, DeepSpeedPlugin
 from datasets import load_dataset
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 from torch import nn
@@ -329,7 +329,8 @@ def main():
     parser = HfArgumentParser((ModelArguments, TrainingArguments))
     # pylint: disable-next=unbalanced-tuple-unpacking
     model_args, training_args = parser.parse_args_into_dataclasses()
-    accelerator = Accelerator()
+    deepspeed_plugin = DeepSpeedPlugin(config=training_args.deepspeed_config_file)
+    accelerator = Accelerator(deepspeed_plugin=deepspeed_plugin)
 
     dataset = prepare_dataset(model_args)
 

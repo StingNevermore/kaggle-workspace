@@ -83,4 +83,5 @@ accelerate launch --config_file ${SCRIPTS_DIR}/default_deepseepd_config.yaml ${P
     --label_names="labels" \
     --max_seq_length=512 \
     --use_4bit=False \
-    --use_lora=True
+    --use_lora=True \
+    --deepspeed_config_file=${SCRIPTS_DIR}/zero_stage3_config.json
