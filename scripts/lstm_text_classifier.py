@@ -10,7 +10,6 @@ from args.lstm_text_classifier_args import ModelArguments, TrainingArguments
 from datasets import Dataset, load_dataset
 from models.LstmTextClassifier import LstmTextClassifier
 from peft import LoraConfig, get_peft_model
-from sklearn.metrics import log_loss
 from torch.optim import AdamW
 from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
@@ -272,22 +271,16 @@ def eval_loop(model, eval_dataloader: DataLoader, accelerator: Accelerator, eval
         batch = {k: v.to(accelerator.device) for k, v in batch.items()}
         with torch.no_grad():
             outputs = model(**batch)
-        logits = outputs.logits
-        logits, labels = accelerator.gather_for_metrics((logits, batch["labels"]))
         total_eval_loss += accelerator.reduce(
             outputs.loss.detach().clone(), reduction="mean"
         ).item()
         progress_bar.update()
     accelerator.log(
-        {
-            "eval_accuracy": log_loss(
-                labels.cpu().numpy(),
-                logits.softmax(dim=-1).float().cpu().numpy(),
-            ),
-            "eval_loss": total_eval_loss / len(eval_dataloader),
-        },
+        {"eval_loss": total_eval_loss / len(eval_dataloader)},
         step=eval_step,
     )
+    if accelerator.is_main_process:
+        print(f"Eval Step {eval_step}, Loss {total_eval_loss / len(eval_dataloader)}")
     progress_bar.close()
 
 
