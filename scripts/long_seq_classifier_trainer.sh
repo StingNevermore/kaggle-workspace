@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# ENV_NAME: local, tencent, virtai, default: local
+# ENV_NAME: local, tencent, virtai, autodl, default: local
 ENV_NAME=$1
 if [ -z "${ENV_NAME}" ]; then
     ENV_NAME=local
@@ -34,11 +34,17 @@ elif [ "${ENV_NAME}" == "tencent" ]; then
     TOKENIZER_NAME=/opt/ml/pretrained/llama-3-8b-tokenizer
     OUTPUT_DIR=/opt/ml/output
     batch_size=4
+elif [ "${ENV_NAME}" == "autodl" ]; then
+    export CUDA_VISIBLE_DEVICES=0,1
+    OUTPUT_BASE_DIR=/root/autodl-fs
+    DATA_PATH=${OUTPUT_BASE_DIR}/datasets/llm-classification/train.csv
+    LOGS_DIR=/root/tf-logs/${identifier}
+    BASE_MODEL_NAME=${OUTPUT_BASE_DIR}/pretrained/llama-3-8b
+    TOKENIZER_NAME=${OUTPUT_BASE_DIR}/pretrained/llama-3-8b
+    OUTPUT_DIR=${OUTPUT_BASE_DIR}/output/${identifier}
+    batch_size=4
 fi
 
-export MASTER_ADDR=localhost
-export MASTER_PORT=9994
-export RANK=0
 export LOCAL_RANK=0
 export WORLD_SIZE=1
 export WANDB_PROJECT=long_seq_classifier_train
@@ -77,4 +83,4 @@ accelerate launch --config_file ${SCRIPTS_DIR}/default_deepseepd_config.yaml ${P
     --label_names="labels" \
     --max_seq_length=512 \
     --use_4bit=False \
-    --use_lora=True \
+    --use_lora=True
