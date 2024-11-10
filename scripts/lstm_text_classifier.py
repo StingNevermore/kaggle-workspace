@@ -4,7 +4,7 @@ from functools import partial
 
 import evaluate
 import torch
-from accelerate import Accelerator
+from accelerate import Accelerator, DummyOptim, DummyScheduler
 from args.lstm_text_classifier_args import ModelArguments, TrainingArguments
 from datasets import Dataset, load_dataset
 from models.LstmTextClassifier import LstmTextClassifier
@@ -321,13 +321,30 @@ def main():
     model = prepare_model(model_args)
     model = model.to(accelerator.device)
 
-    optimizer = AdamW(model.parameters(), lr=training_args.learning_rate)
-    lr_scheduler = get_cosine_schedule_with_warmup(
-        optimizer,
-        num_warmup_steps=200,
-        num_training_steps=(len(train_dataloader) * training_args.num_train_epochs)
-        // training_args.gradient_accumulation_steps,
+    optimizer_cls = (
+        AdamW
+        if accelerator.state.deepspeed_plugin is None
+        or "optimizer" not in accelerator.state.deepspeed_plugin.deepspeed_config
+        else DummyOptim
     )
+    optimizer = optimizer_cls(model.parameters(), lr=training_args.learning_rate)
+
+    if (
+        accelerator.state.deepspeed_plugin is None
+        or "scheduler" not in accelerator.state.deepspeed_plugin.deepspeed_config
+    ):
+        lr_scheduler = get_cosine_schedule_with_warmup(
+            optimizer=optimizer,
+            num_warmup_steps=200,
+            num_training_steps=(len(train_dataloader) * training_args.num_train_epochs)
+            // training_args.gradient_accumulation_steps,
+        )
+    else:
+        lr_scheduler = DummyScheduler(
+            optimizer,
+            total_num_steps=training_args.max_train_steps,
+            warmup_num_steps=training_args.num_warmup_steps,
+        )
 
     model, optimizer, train_dataloader, eval_dataloader, lr_scheduler = (
         accelerator.prepare(
