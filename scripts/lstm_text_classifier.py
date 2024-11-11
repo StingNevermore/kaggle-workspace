@@ -313,7 +313,7 @@ def main():
     model_args, training_args = parser.parse_args_into_dataclasses()
 
     config = ProjectConfiguration(project_dir=training_args.logs_dir, total_limit=3)
-    accelerator = Accelerator(config=config, log_with=["tensorboard"])
+    accelerator = Accelerator(project_config=config, log_with=["tensorboard"])
 
     dataset = prepare_dataset(
         training_args.dataset_dir,
