@@ -241,8 +241,7 @@ def training_loop(
                     f"Epoch {epoch + 1}/{training_args.num_train_epochs}, Step {step + 1}, Loss {step_loss}"
                 )
                 accelerator.log(
-                    {"train_loss": step_loss},
-                    {"lr": lr_scheduler.get_last_lr()[0]},
+                    {"train_loss": step_loss, "lr": lr_scheduler.get_last_lr()[0]},
                     step=step,
                 )
             progress_bar.update()
