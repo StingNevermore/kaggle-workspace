@@ -312,9 +312,7 @@ def main():
     parser = HfArgumentParser((ModelArguments, TrainingArguments))
     model_args, training_args = parser.parse_args_into_dataclasses()
 
-    config = ProjectConfiguration(
-        project_dir=training_args.logs_dir, log_with=["tensorboard"], total_limit=3
-    )
+    config = ProjectConfiguration(project_dir=training_args.logs_dir, total_limit=3)
     accelerator = Accelerator(config=config, log_with=["tensorboard"])
 
     dataset = prepare_dataset(
