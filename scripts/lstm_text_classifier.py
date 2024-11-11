@@ -314,7 +314,7 @@ def main():
 
     config = ProjectConfiguration(project_dir=training_args.logs_dir, total_limit=3)
     accelerator = Accelerator(project_config=config, log_with=["tensorboard"])
-    accelerator.init_trackers("lstm-text-classifier")
+    accelerator.init_trackers(training_args.identifier)
 
     dataset = prepare_dataset(
         training_args.dataset_dir,
