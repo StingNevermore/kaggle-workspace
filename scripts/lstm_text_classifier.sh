@@ -1,11 +1,12 @@
 #!/bin/bash
 
 identifier="gemma-2-9b-text-classifier"
-base_dir="/root/autodl-fs"
-model_name_or_path="${base_dir}/pretrained/gemma-2-9b"
-tokenizer_name_or_path="${base_dir}/pretrained/gemma-2-9b"
-dataset_dir="${base_dir}/datasets/llm-classification"
-data_dir="${base_dir}/train-${identifier}"
+fs_dir="/root/autodl-fs"
+data_disk_dir="/root/autodl-data"
+model_name_or_path="${fs_dir}/pretrained/gemma-2-9b"
+tokenizer_name_or_path="${fs_dir}/pretrained/gemma-2-9b"
+dataset_dir="${fs_dir}/datasets/llm-classification"
+data_dir="${data_disk_dir}/train-${identifier}"
 logs_dir="/root/tf-logs"
 scripts_dir=$(dirname $(readlink -f "$0"))
 batch_size=4
