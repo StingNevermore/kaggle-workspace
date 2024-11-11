@@ -8,7 +8,7 @@ dataset_dir="${base_dir}/datasets/llm-classification"
 data_dir="${base_dir}/train-${identifier}"
 logs_dir="/root/tf-logs"
 scripts_dir=$(dirname $(readlink -f "$0"))
-batch_size=8
+batch_size=4
 
 export CUDA_VISIBLE_DEVICES="0,1"
 
