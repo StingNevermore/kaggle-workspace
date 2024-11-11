@@ -26,5 +26,4 @@ accelerate launch --config_file ${scripts_dir}/default_deepseepd_config.yaml ${s
     --logs_dir "${logs_dir}" \
     --identifier "${identifier}" \
     --eval_steps 0.2 \
-    --logging_steps 10 \
-    --mini_dataset_test_size 0.1
+    --logging_steps 100
