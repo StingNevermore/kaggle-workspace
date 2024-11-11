@@ -252,7 +252,7 @@ def training_loop(
             eval_steps = handle_steps(training_args.eval_steps, total_steps)
             if (step + 1) % eval_steps == 0:
                 eval_loop(model, eval_dataloader, accelerator, (step + 1) / eval_steps)
-                accelerator.save_state(training_args.output_dir)
+                accelerator.save_state()
             if (step + 1) % 100 == 0:
                 torch.cuda.empty_cache()
                 torch.cuda.synchronize()
@@ -312,7 +312,12 @@ def main():
     parser = HfArgumentParser((ModelArguments, TrainingArguments))
     model_args, training_args = parser.parse_args_into_dataclasses()
 
-    config = ProjectConfiguration(project_dir=training_args.logs_dir, total_limit=3)
+    config = ProjectConfiguration(
+        project_dir=training_args.output_dir,
+        logging_dir=training_args.logs_dir,
+        total_limit=3,
+        automatic_checkpoint_naming=True,
+    )
     accelerator = Accelerator(project_config=config, log_with=["tensorboard"])
     accelerator.init_trackers(training_args.identifier)
 
