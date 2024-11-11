@@ -291,14 +291,13 @@ def eval_loop(model, eval_dataloader: DataLoader, accelerator: Accelerator, eval
     progress_bar.close()
 
 
-def get_progress_bar(total_steps, desc, accelerator):
+def get_progress_bar(total_steps, accelerator):
     progress_bar_format = (
         "{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}{postfix}]"
     )
 
     return tqdm(
         total=total_steps,
-        desc=desc,
         disable=not accelerator.is_main_process,
         position=0,
         leave=True,
