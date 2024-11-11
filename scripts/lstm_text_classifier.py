@@ -5,7 +5,7 @@ from typing import Optional
 
 import torch
 from accelerate import Accelerator
-from accelerate.utils import DummyOptim, DummyScheduler, set_seed
+from accelerate.utils import DummyOptim, DummyScheduler, ProjectConfiguration, set_seed
 from args.lstm_text_classifier_args import ModelArguments, TrainingArguments
 from datasets import Dataset, load_dataset
 from models.LstmTextClassifier import LstmTextClassifier
@@ -312,9 +312,10 @@ def main():
     parser = HfArgumentParser((ModelArguments, TrainingArguments))
     model_args, training_args = parser.parse_args_into_dataclasses()
 
-    accelerator = Accelerator(
-        project_dir=training_args.logs_dir, log_with=["tensorboard"]
+    config = ProjectConfiguration(
+        project_dir=training_args.logs_dir, log_with=["tensorboard"], total_limit=3
     )
+    accelerator = Accelerator(config=config, log_with=["tensorboard"])
 
     dataset = prepare_dataset(
         training_args.dataset_dir,
