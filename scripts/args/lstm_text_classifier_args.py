@@ -132,12 +132,10 @@ class TrainingArguments:
 
     def __post_init__(self):
         if self.output_dir is None:
-            self.output_dir = os.path.join(self.data_dir, f"outputs-{self.identifier}")
+            self.output_dir = os.path.join(self.data_dir, "outputs")
         if self.model_save_dir is None:
-            self.model_save_dir = os.path.join(
-                self.output_dir, f"model-{self.identifier}"
-            )
+            self.model_save_dir = os.path.join(self.output_dir, "model")
         if self.logs_dir is None:
-            self.logs_dir = os.path.join(self.data_dir, f"logs-{self.identifier}")
+            self.logs_dir = os.path.join(self.data_dir, "logs")
         if self.per_device_eval_batch_size is None:
             self.per_device_eval_batch_size = self.per_device_train_batch_size
