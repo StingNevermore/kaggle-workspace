@@ -1,5 +1,4 @@
 import json
-import os
 from functools import partial
 from typing import Optional
 
@@ -209,11 +208,13 @@ def training_loop(
 ):
     torch.cuda.empty_cache()
     torch.cuda.synchronize()
+    progress_bar = get_progress_bar(
+        total_steps=len(train_dataloader) * training_args.num_train_epochs,
+        accelerator=accelerator,
+    )
     for epoch in range(training_args.num_train_epochs):
-        progress_bar = get_progress_bar(
-            total_steps=len(train_dataloader) * training_args.num_train_epochs,
-            desc=f"Epoch {epoch + 1}/{training_args.num_train_epochs}",
-            accelerator=accelerator,
+        progress_bar.set_description(
+            f"Epoch {epoch + 1}/{training_args.num_train_epochs}"
         )
         total_steps = len(train_dataloader) * training_args.num_train_epochs
         for step, batch in enumerate(train_dataloader):
@@ -241,6 +242,7 @@ def training_loop(
                 )
                 accelerator.log(
                     {"train_loss": step_loss},
+                    {"lr": lr_scheduler.get_last_lr()[0]},
                     step=step,
                 )
             progress_bar.update()
@@ -258,7 +260,7 @@ def training_loop(
             if (step + 1) % 100 == 0:
                 torch.cuda.empty_cache()
                 torch.cuda.synchronize()
-        progress_bar.close()
+    progress_bar.close()
     accelerator.end_training()
 
 
