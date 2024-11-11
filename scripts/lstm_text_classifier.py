@@ -208,7 +208,6 @@ def training_loop(
 ):
     torch.cuda.empty_cache()
     torch.cuda.synchronize()
-    print(f"Training {training_args.num_train_epochs} epochs")
     for epoch in range(training_args.num_train_epochs):
         progress_bar = get_progress_bar(
             total_steps=len(train_dataloader) * training_args.num_train_epochs,
@@ -236,7 +235,9 @@ def training_loop(
                 loss.detach().clone(), reduction="mean"
             ).item()
             if (step + 1) % logging_steps == 0:
-                print(f"Epoch {epoch}, Step {step + 1}, Loss {step_loss}")
+                print(
+                    f"Epoch {epoch + 1}/{training_args.num_train_epochs}, Step {step + 1}, Loss {step_loss}"
+                )
                 accelerator.log(
                     {"train_loss": step_loss},
                     step=step,
