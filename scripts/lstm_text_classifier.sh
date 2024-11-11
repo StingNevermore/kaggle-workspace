@@ -1,9 +1,9 @@
 #!/bin/bash
 
-identifier="llama-3-8b-text-classifier"
+identifier="gemma-2-9b-text-classifier"
 base_dir="/root/autodl-fs"
-model_name_or_path="${base_dir}/pretrained/llama-3-8b"
-tokenizer_name_or_path="${base_dir}/pretrained/llama-3-8b"
+model_name_or_path="${base_dir}/pretrained/gemma-2-9b"
+tokenizer_name_or_path="${base_dir}/pretrained/gemma-2-9b"
 dataset_dir="${base_dir}/datasets/llm-classification"
 data_dir="${base_dir}/train-${identifier}"
 logs_dir="/root/tf-logs"
