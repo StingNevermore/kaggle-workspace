@@ -6,7 +6,7 @@ model_name_or_path="${base_dir}/pretrained/llama-3-8b"
 tokenizer_name_or_path="${base_dir}/pretrained/llama-3-8b"
 dataset_dir="${base_dir}/datasets/llm-classification"
 data_dir="${base_dir}/train-${identifier}"
-logs_dir="/root/tf-logs/logs/${identifier}"
+logs_dir="/root/tf-logs/${identifier}"
 scripts_dir=$(dirname $(readlink -f "$0"))
 batch_size=8
 
@@ -25,6 +25,4 @@ accelerate launch --config_file ${scripts_dir}/default_deepseepd_config.yaml ${s
     --data_dir "${data_dir}" \
     --logs_dir "${logs_dir}" \
     --identifier "${identifier}" \
-    --eval_steps 0.5 \
-    --logging_steps 10 \
-    --mini_dataset_test_size 0.1
+    --eval_steps 0.2
