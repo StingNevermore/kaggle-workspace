@@ -117,12 +117,11 @@ def preprocess_dataset(
         dataset = dataset.map(
             preprocess_function,
             batched=True,
-            remove_columns=dataset.column_names,
+            remove_columns=dataset["train"].column_names,
         )
         dataset = dataset.map(
-            tokenizer, batched=True, remove_columns=dataset.column_names
+            tokenizer, batched=True, remove_columns=dataset["train"].column_names
         )
-        dataset = dataset.shuffle(seed=seed)
     return dataset
 
 
@@ -135,8 +134,7 @@ def prepare_dataset(
     mini_dataset_test_size: Optional[float],
 ):
     """Prepare the dataset"""
-    dataset = load_dataset("csv", data_files=os.path.join(dataset_dir, "*.csv"))
-    dataset = dataset["train"]
+    dataset = load_dataset("csv", data_dir=dataset_dir)
     dataset = preprocess_dataset(
         dataset, tokenizer_name_or_path, max_seq_length, accelerator, seed
     )
@@ -145,8 +143,11 @@ def prepare_dataset(
         and mini_dataset_test_size > 0
         and mini_dataset_test_size < 1
     ):
-        dataset = dataset.shard(num_shards=int(1 / mini_dataset_test_size), index=1)
-    return dataset.train_test_split(test_size=0.1, seed=seed)
+        dataset = dataset["train"].shard(
+            num_shards=int(1 / mini_dataset_test_size), index=1
+        )
+        dataset = dataset.train_test_split(test_size=0.1, seed=seed)
+    return dataset
 
 
 def prepare_dataloader(dataset: Dataset, train_batch_size: int, eval_batch_size: int):
