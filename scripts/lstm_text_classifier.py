@@ -178,6 +178,7 @@ def prepare_model(model_args: ModelArguments):
     base_model = AutoModel.from_pretrained(
         model_args.base_model_name_or_path,
         torch_dtype=torch.bfloat16,
+        attn_implementation="flash_attention_2",
     )
     base_model.gradient_checkpointing_enable()
     model = LstmTextClassifier(
