@@ -1,15 +1,15 @@
 #!/bin/bash
 
-identifier="gemma-2-9b-text-classifier"
+identifier="llama-3-8b-instruction"
 fs_dir="/root/autodl-fs"
 data_disk_dir="/root/autodl-tmp"
-model_name_or_path="${fs_dir}/pretrained/gemma-2-9b"
-tokenizer_name_or_path="${fs_dir}/pretrained/gemma-2-9b"
+model_name_or_path="${data_disk_dir}/pretrained/llama-3-8b-instruct"
+tokenizer_name_or_path="${data_disk_dir}/pretrained/llama-3-8b-instruct"
 dataset_dir="${fs_dir}/datasets/llm-classification"
 data_dir="${data_disk_dir}/train-${identifier}"
 logs_dir="/root/tf-logs"
 scripts_dir=$(dirname $(readlink -f "$0"))
-batch_size=4
+batch_size=8
 
 export CUDA_VISIBLE_DEVICES="0,1"
 
