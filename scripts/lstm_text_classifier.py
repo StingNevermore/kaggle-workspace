@@ -364,7 +364,7 @@ def main():
     ):
         lr_scheduler = get_cosine_schedule_with_warmup(
             optimizer=optimizer,
-            num_warmup_steps=200,
+            num_warmup_steps=training_args.warmup_steps,
             num_training_steps=(len(train_dataloader) * training_args.num_train_epochs)
             // training_args.gradient_accumulation_steps,
         )
@@ -372,7 +372,7 @@ def main():
         lr_scheduler = DummyScheduler(
             optimizer,
             total_num_steps=(len(train_dataloader) * training_args.num_train_epochs),
-            warmup_num_steps=200,
+            warmup_num_steps=training_args.warmup_steps,
         )
 
     model, optimizer, train_dataloader, eval_dataloader, lr_scheduler = (

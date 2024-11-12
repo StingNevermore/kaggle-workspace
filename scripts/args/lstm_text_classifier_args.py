@@ -120,6 +120,11 @@ class TrainingArguments:
         metadata={"help": "The fraction of training steps between evaluations"},
     )
 
+    warmup_steps: Optional[int] = field(
+        default=200,
+        metadata={"help": "The number of warmup steps"},
+    )
+
     seed: Optional[int] = field(
         default=42,
         metadata={"help": "The random seed"},
