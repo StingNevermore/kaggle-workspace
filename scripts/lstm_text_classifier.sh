@@ -1,10 +1,10 @@
 #!/bin/bash
 
-identifier="llama-3-8b-instruction"
+identifier="llama-3-8b-4e-4"
 fs_dir="/root/autodl-fs"
 data_disk_dir="/root/autodl-tmp"
-model_name_or_path="${data_disk_dir}/pretrained/llama-3-8b-instruct"
-tokenizer_name_or_path="${data_disk_dir}/pretrained/llama-3-8b-instruct"
+model_name_or_path="${fs_dir}/pretrained/llama-3-8b"
+tokenizer_name_or_path="${fs_dir}/pretrained/llama-3-8b"
 dataset_dir="${fs_dir}/datasets/llm-classification"
 data_dir="${data_disk_dir}/train-${identifier}"
 logs_dir="/root/tf-logs"
