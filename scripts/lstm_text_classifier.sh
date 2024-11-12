@@ -2,7 +2,7 @@
 
 identifier="gemma-2-9b-text-classifier"
 fs_dir="/root/autodl-fs"
-data_disk_dir="/root/autodl-data"
+data_disk_dir="/root/autodl-tmp"
 model_name_or_path="${fs_dir}/pretrained/gemma-2-9b"
 tokenizer_name_or_path="${fs_dir}/pretrained/gemma-2-9b"
 dataset_dir="${fs_dir}/datasets/llm-classification"
