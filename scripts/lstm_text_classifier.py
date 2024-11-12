@@ -267,7 +267,6 @@ def eval_loop(model, eval_dataloader: DataLoader, accelerator: Accelerator, eval
     model.eval()
     progress_bar = get_progress_bar(
         total_steps=len(eval_dataloader),
-        desc=f"Eval Step {eval_step}",
         accelerator=accelerator,
     )
     total_eval_loss = 0
