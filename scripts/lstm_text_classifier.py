@@ -180,7 +180,7 @@ def prepare_model(model_args: ModelArguments):
         torch_dtype=torch.bfloat16,
         attn_implementation="flash_attention_2",
     )
-    # base_model.gradient_checkpointing_enable()
+    base_model.gradient_checkpointing_enable()
     model = LstmTextClassifier(
         base_model,
         model_args.num_classes,
