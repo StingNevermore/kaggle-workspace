@@ -4,7 +4,13 @@ from typing import Optional
 
 import torch
 from accelerate import Accelerator
-from accelerate.utils import DummyOptim, DummyScheduler, ProjectConfiguration, set_seed
+from accelerate.utils import (
+    DataLoaderConfiguration,
+    DummyOptim,
+    DummyScheduler,
+    ProjectConfiguration,
+    set_seed,
+)
 from args.lstm_text_classifier_args import ModelArguments, TrainingArguments
 from datasets import Dataset, load_dataset
 from models.LstmTextClassifier import LstmTextClassifier
@@ -219,12 +225,10 @@ def training_loop(
         total_steps = len(train_dataloader) * training_args.num_train_epochs
         for step, batch in enumerate(train_dataloader):
             model.train()
-            batch = {k: v.to(accelerator.device) for k, v in batch.items()}
-            outputs = model(**batch)
-            loss = outputs.loss
-            loss = loss / training_args.gradient_accumulation_steps
-            accelerator.backward(loss)
-            if (step + 1) % training_args.gradient_accumulation_steps == 0:
+            with accelerator.accumulate(model):
+                outputs = model(**batch)
+                loss = outputs.loss
+                accelerator.backward(loss)
                 if accelerator.sync_gradients:
                     accelerator.clip_grad_norm_(
                         model.parameters(), training_args.max_grad_norm
@@ -271,7 +275,6 @@ def eval_loop(model, eval_dataloader: DataLoader, accelerator: Accelerator, eval
     )
     total_eval_loss = 0
     for batch in eval_dataloader:
-        batch = {k: v.to(accelerator.device) for k, v in batch.items()}
         with torch.no_grad():
             outputs = model(**batch)
         total_eval_loss += accelerator.reduce(
@@ -312,14 +315,21 @@ def main():
     """Main function"""
     parser = HfArgumentParser((ModelArguments, TrainingArguments))
     model_args, training_args = parser.parse_args_into_dataclasses()
+    set_seed(training_args.seed)
 
-    config = ProjectConfiguration(
+    project_config = ProjectConfiguration(
         project_dir=training_args.output_dir,
         logging_dir=training_args.logs_dir,
         total_limit=3,
         automatic_checkpoint_naming=True,
     )
-    accelerator = Accelerator(project_config=config, log_with=["tensorboard"])
+    dataloader_config = DataLoaderConfiguration(use_stateful_dataloader=True)
+    accelerator = Accelerator(
+        project_config=project_config,
+        dataloader_config=dataloader_config,
+        log_with=["tensorboard"],
+        gradient_accumulation_steps=training_args.gradient_accumulation_steps,
+    )
     accelerator.init_trackers(training_args.identifier)
 
     dataset = prepare_dataset(
@@ -336,8 +346,6 @@ def main():
         training_args.per_device_train_batch_size,
         training_args.per_device_eval_batch_size,
     )
-
-    set_seed(training_args.seed)
 
     model = prepare_model(model_args)
 
@@ -381,8 +389,8 @@ def main():
         accelerator,
         training_args,
     )
-    unwrapped_model = accelerator.unwrap_model(model)
     if accelerator.is_main_process:
+        unwrapped_model = accelerator.unwrap_model(model)
         unwrapped_model.save_pretrained(
             training_args.model_save_dir,
             is_main_process=accelerator.is_main_process,
