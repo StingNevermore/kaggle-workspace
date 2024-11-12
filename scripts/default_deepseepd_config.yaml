@@ -2,8 +2,8 @@ compute_environment: LOCAL_MACHINE
 deepspeed_config:
   deepspeed_config_file: /root/code/kaggle-workspace/scripts/zero_stage3_config.json
   zero3_init_flag: true
+  zero3_save_16bit_model: true
 distributed_type: DEEPSPEED
-zero3_save_16bit_model: true
 fsdp_config: {}
 machine_rank: 0
 main_process_ip: null
