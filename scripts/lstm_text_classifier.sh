@@ -21,7 +21,7 @@ accelerate launch --config_file ${scripts_dir}/default_deepseepd_config.yaml ${s
     --max_seq_length 512 \
     --per_device_train_batch_size ${batch_size} \
     --per_device_eval_batch_size ${batch_size} \
-    --learning_rate 1e-4 \
+    --learning_rate 4e-4 \
     --num_train_epochs 1 \
     --data_dir "${data_dir}" \
     --logs_dir "${logs_dir}" \
