@@ -165,13 +165,16 @@ def prepare_dataloader(dataset: Dataset, train_batch_size: int, eval_batch_size:
         collate_fn=default_data_collator,
         pin_memory=True,
     )
-    eval_dataloader = DataLoader(
-        dataset["test"],
-        batch_size=eval_batch_size,
-        shuffle=False,
-        collate_fn=default_data_collator,
-        pin_memory=True,
-    )
+    if "test" in dataset:
+        eval_dataloader = DataLoader(
+            dataset["test"],
+            batch_size=eval_batch_size,
+            shuffle=False,
+            collate_fn=default_data_collator,
+            pin_memory=True,
+        )
+    else:
+        eval_dataloader = None
     return train_dataloader, eval_dataloader
 
 
@@ -210,7 +213,7 @@ def training_loop(
     model,
     optimizer,
     train_dataloader: DataLoader,
-    eval_dataloader: DataLoader,
+    eval_dataloader: Optional[DataLoader],
     lr_scheduler,
     accelerator: Accelerator,
     training_args: TrainingArguments,
@@ -260,9 +263,8 @@ def training_loop(
                     }
                 )
             eval_steps = handle_steps(training_args.eval_steps, total_steps)
-            if (step + 1) % eval_steps == 0:
+            if eval_dataloader is not None and (step + 1) % eval_steps == 0:
                 eval_loop(model, eval_dataloader, accelerator, (step + 1) / eval_steps)
-                # accelerator.save_state()
             if (step + 1) % 100 == 0:
                 torch.cuda.empty_cache()
                 torch.cuda.synchronize()
@@ -376,11 +378,16 @@ def main():
             warmup_num_steps=training_args.warmup_steps,
         )
 
-    model, optimizer, train_dataloader, eval_dataloader, lr_scheduler = (
-        accelerator.prepare(
-            model, optimizer, train_dataloader, eval_dataloader, lr_scheduler
+    if eval_dataloader is not None:
+        model, optimizer, train_dataloader, eval_dataloader, lr_scheduler = (
+            accelerator.prepare(
+                model, optimizer, train_dataloader, eval_dataloader, lr_scheduler
+            )
         )
-    )
+    else:
+        model, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(
+            model, optimizer, train_dataloader, lr_scheduler
+        )
 
     training_loop(
         model,
