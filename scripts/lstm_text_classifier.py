@@ -125,7 +125,9 @@ def preprocess_dataset(
             remove_columns=dataset["train"].column_names,
         )
         dataset = dataset.map(
-            tokenizer, batched=True, remove_columns=dataset["train"].column_names
+            tokenizer,
+            batched=True,
+            remove_columns=dataset["train"].column_names,
         )
     return dataset
 
