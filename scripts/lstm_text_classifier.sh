@@ -1,6 +1,6 @@
 #!/bin/bash
 
-identifier="gemma-2-9b-it"
+identifier="gemma-2-9b-it-1024"
 fs_dir="/root/autodl-fs"
 data_disk_dir="/root/autodl-tmp"
 model_name_or_path="${fs_dir}/pretrained/gemma-2-9b-it"
