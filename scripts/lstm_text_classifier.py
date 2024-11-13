@@ -390,13 +390,9 @@ def main():
         accelerator,
         training_args,
     )
-    if accelerator.is_main_process:
-        unwrapped_model = accelerator.unwrap_model(model)
-        unwrapped_model.save_pretrained(
-            training_args.model_save_dir,
-            is_main_process=accelerator.is_main_process,
-            save_function=accelerator.save,
-        )
+
+    accelerator.wait_for_everyone()
+    accelerator.save_model(model, training_args.model_save_dir)
 
 
 if __name__ == "__main__":

@@ -1,10 +1,10 @@
 #!/bin/bash
 
-identifier="llama-3-8b-instruct-1024"
+identifier="gemma-2-9b-it"
 fs_dir="/root/autodl-fs"
 data_disk_dir="/root/autodl-tmp"
-model_name_or_path="${data_disk_dir}/pretrained/llama-3-8b-instruct"
-tokenizer_name_or_path="${data_disk_dir}/pretrained/llama-3-8b-instruct"
+model_name_or_path="${fs_dir}/pretrained/gemma-2-9b-it"
+tokenizer_name_or_path="${fs_dir}/pretrained/gemma-2-9b-it"
 dataset_dir="${fs_dir}/datasets/llm-classification"
 data_dir="${data_disk_dir}/train-${identifier}"
 logs_dir="/root/tf-logs"
@@ -29,4 +29,4 @@ accelerate launch --config_file ${scripts_dir}/default_deepseepd_config.yaml ${s
     --eval_steps 0.2 \
     --logging_steps 50 \
     --warmup_steps 100 \
-    --gradient_accumulation_steps 8
+    --mini_dataset_test_size 0.1
