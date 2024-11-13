@@ -390,8 +390,8 @@ def main():
         training_args,
     )
 
-    accelerator.wait_for_everyone()
-    accelerator.save_model(model, training_args.model_save_dir)
+    model = accelerator.unwrap_model(model)
+    model.save_pretrained(training_args.model_save_dir)
     accelerator.end_training()
 
 
