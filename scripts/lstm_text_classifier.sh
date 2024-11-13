@@ -1,10 +1,10 @@
 #!/bin/bash
 
-identifier="llama-3-8b-4e-4"
+identifier="gemma-2-9b-it"
 fs_dir="/root/autodl-fs"
 data_disk_dir="/root/autodl-tmp"
-model_name_or_path="${fs_dir}/pretrained/llama-3-8b"
-tokenizer_name_or_path="${fs_dir}/pretrained/llama-3-8b"
+model_name_or_path="${fs_dir}/pretrained/gemma-2-9b-it"
+tokenizer_name_or_path="${fs_dir}/pretrained/gemma-2-9b-it"
 dataset_dir="${fs_dir}/datasets/llm-classification"
 data_dir="${data_disk_dir}/train-${identifier}"
 logs_dir="/root/tf-logs"
