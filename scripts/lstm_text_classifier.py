@@ -390,15 +390,16 @@ def main():
         training_args,
     )
     accelerator.wait_for_everyone()
+    state_dict = accelerator.get_state_dict(model)
     unwrapped_model = accelerator.unwrap_model(model)
-    if accelerator.is_main_process:
-        unwrapped_model.save_pretrained(
-            training_args.model_save_dir,
-            is_main_process=accelerator.is_main_process,
-            save_function=accelerator.save,
-            state_dict=accelerator.get_state_dict(model),
-        )
-    accelerator.wait_for_everyone()
+    unwrapped_model.save_pretrained(
+        training_args.model_save_dir,
+        is_main_process=accelerator.is_main_process,
+        save_function=accelerator.save,
+        state_dict=state_dict
+        if state_dict is not None
+        else unwrapped_model.state_dict(),
+    )
     accelerator.end_training()
 
 
