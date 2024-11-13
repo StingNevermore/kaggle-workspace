@@ -260,12 +260,11 @@ def training_loop(
             eval_steps = handle_steps(training_args.eval_steps, total_steps)
             if (step + 1) % eval_steps == 0:
                 eval_loop(model, eval_dataloader, accelerator, (step + 1) / eval_steps)
-                accelerator.save_state()
+                # accelerator.save_state()
             if (step + 1) % 100 == 0:
                 torch.cuda.empty_cache()
                 torch.cuda.synchronize()
     progress_bar.close()
-    accelerator.end_training()
 
 
 def eval_loop(model, eval_dataloader: DataLoader, accelerator: Accelerator, eval_step):
@@ -393,6 +392,7 @@ def main():
 
     accelerator.wait_for_everyone()
     accelerator.save_model(model, training_args.model_save_dir)
+    accelerator.end_training()
 
 
 if __name__ == "__main__":
