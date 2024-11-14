@@ -409,6 +409,7 @@ def main():
         if state_dict is not None
         else unwrapped_model.state_dict(),
     )
+    accelerator.deepspeed_plugin.is_train_batch_min
     accelerator.end_training()
 
 
