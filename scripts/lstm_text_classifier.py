@@ -73,7 +73,7 @@ def preprocess_function(examples):
         response_a = "".join([r if r is not None else "" for r in response_a])
         response_b = "".join([r if r is not None else "" for r in response_b])
 
-        sentences = [prompt, response_a, response_b]
+        sentences = [prompt + "\n" + response_a, prompt + "\n" + response_b]
         samples.append((id, sentences, label))
 
     return {
