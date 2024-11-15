@@ -1,11 +1,11 @@
 #!/bin/bash
 
-identifier="llama-3-8b-instruct-1024"
+identifier="llama-3-8b-instruct-double-prompts-1024-full"
 fs_dir="/root/autodl-fs"
 data_disk_dir="/root/autodl-tmp"
 model_name_or_path="${fs_dir}/pretrained/llama-3-8b-instruct"
 tokenizer_name_or_path="${fs_dir}/pretrained/llama-3-8b-instruct"
-dataset_dir="${fs_dir}/datasets/llm-classification"
+dataset_dir="${fs_dir}/datasets/llm-classification-full"
 data_dir="${data_disk_dir}/train-${identifier}"
 logs_dir="/root/tf-logs"
 scripts_dir=$(dirname $(readlink -f "$0"))

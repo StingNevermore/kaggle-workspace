@@ -1,11 +1,11 @@
 #!/bin/bash
 
-identifier="gemma-2-9b-it-1024"
+identifier="gemma-2-9b-it-double-prompts-1024-full"
 fs_dir="/root/autodl-fs"
 data_disk_dir="/root/autodl-tmp"
 model_name_or_path="${fs_dir}/pretrained/gemma-2-9b-it"
 tokenizer_name_or_path="${fs_dir}/pretrained/gemma-2-9b-it"
-dataset_dir="${fs_dir}/datasets/llm-classification"
+dataset_dir="${fs_dir}/datasets/llm-classification-full"
 data_dir="${data_disk_dir}/train-${identifier}"
 logs_dir="/root/tf-logs"
 scripts_dir=$(dirname $(readlink -f "$0"))
