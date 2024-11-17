@@ -305,7 +305,6 @@ class LlamaForSequenceClassification(LlamaPreTrainedModel):
             return_dict=return_dict,
         )
         hidden_states = transformer_outputs.last_hidden_state
-        print(hidden_states)
         logits = self.score(hidden_states, attention_mask, batch_size, num_sentences)
         loss = None
         if labels is not None:
