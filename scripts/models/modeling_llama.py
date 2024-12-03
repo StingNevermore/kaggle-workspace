@@ -12,7 +12,7 @@ from transformers.models.llama.modeling_llama import (
     LlamaRMSNorm,
     LlamaRotaryEmbedding,
     SequenceClassifierOutputWithPast,
-    StaticCache,
+    apply_rotary_pos_emb,
 )
 
 
@@ -26,19 +26,8 @@ class LlamaFlashAttention(LlamaAttention):
     def forward(
         self,
         hidden_states: torch.Tensor,
-        attention_mask: Optional[torch.Tensor] = None,
-        position_ids: Optional[torch.LongTensor] = None,
-        past_key_value: Optional[Cache] = None,
-        output_attentions: bool = False,
-        use_cache: bool = False,
-        cache_position: Optional[torch.LongTensor] = None,
         position_embeddings: Optional[Tuple[torch.Tensor, torch.Tensor]] = None,
     ) -> Tuple[torch.Tensor, Optional[torch.Tensor], Optional[Tuple[torch.Tensor]]]:
-        if isinstance(past_key_value, StaticCache):
-            raise ValueError(
-                "`static` cache implementation is not compatible with `attn_implementation==flash_attention_1` "
-                "make sure to use `sdpa` in the mean time, and open an issue at https://github.com/huggingface/transformers"
-            )
         baz, q_len, _ = hidden_states.size()
 
         query_states = self.q_proj(hidden_states)
@@ -52,18 +41,8 @@ class LlamaFlashAttention(LlamaAttention):
         value_states = value_states.view(
             baz, q_len, self.num_key_value_heads, self.head_dim
         )
-        attn_output = self.attn_fn(
-            query_states,
-            key_states,
-            value_states,
-            dropout_p=self.attention_dropout if self.training else 0.0,
-            causal=True,
-        )
 
-        attn_output = attn_output.contiguous().view(baz, q_len, self.hidden_size)
-        attn_output = self.o_proj(attn_output)
-
-        return attn_output, None, None
+        cos, sin = position_embeddings
 
 
 class LlamaDecoderLayer(nn.Module):
@@ -81,11 +60,6 @@ class LlamaDecoderLayer(nn.Module):
         self,
         hidden_states: torch.Tensor,
         attention_mask: Optional[torch.Tensor] = None,
-        position_ids: Optional[torch.LongTensor] = None,
-        past_key_value: Optional[Tuple[torch.Tensor]] = None,
-        output_attentions: Optional[bool] = False,
-        use_cache: Optional[bool] = False,
-        cache_position: Optional[torch.LongTensor] = None,
         position_embeddings: Optional[Tuple[torch.Tensor, torch.Tensor]] = None,
         **kwargs,
     ) -> Tuple[
@@ -97,11 +71,6 @@ class LlamaDecoderLayer(nn.Module):
         hidden_states, self_attn_weights, present_key_value = self.self_attn(
             hidden_states=hidden_states,
             attention_mask=attention_mask,
-            position_ids=position_ids,
-            past_key_value=past_key_value,
-            output_attentions=output_attentions,
-            use_cache=use_cache,
-            cache_position=cache_position,
             position_embeddings=position_embeddings,
             **kwargs,
         )
@@ -112,15 +81,7 @@ class LlamaDecoderLayer(nn.Module):
         hidden_states = self.mlp(hidden_states)
         hidden_states = residual + hidden_states
 
-        outputs = (hidden_states,)
-
-        if output_attentions:
-            outputs += (self_attn_weights,)
-
-        if use_cache:
-            outputs += (present_key_value,)
-
-        return outputs
+        return (hidden_states,)
 
 
 class LlamaModel(LlamaPreTrainedModel):
@@ -155,39 +116,27 @@ class LlamaModel(LlamaPreTrainedModel):
         self,
         input_ids: torch.LongTensor,
         attention_mask: Optional[torch.Tensor] = None,
-        position_ids: Optional[torch.LongTensor] = None,
-        past_key_values: Optional[Union[Cache, List[torch.FloatTensor]]] = None,
-        inputs_embeds: Optional[torch.FloatTensor] = None,
-        use_cache: Optional[bool] = None,
-        output_attentions: Optional[bool] = None,
-        output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
-        cache_position: Optional[torch.LongTensor] = None,
     ) -> Union[Tuple, BaseModelOutputWithPast]:
-        if inputs_embeds is None:
-            inputs_embeds = self.embed_tokens(input_ids)
+        inputs_embeds = self.embed_tokens(input_ids)
         hidden_states = inputs_embeds
-        output_hidden_states = (
-            output_hidden_states
-            if output_hidden_states is not None
-            else self.config.output_hidden_states
-        )
-        output_attentions = (
-            output_attentions
-            if output_attentions is not None
-            else self.config.output_attentions
-        )
+        position_ids = torch.arange(
+            0, inputs_embeds.shape[1], device=inputs_embeds.device
+        ).unsqueeze(0)
+        position_embeddings = self.rotary_emb(hidden_states, position_ids)
+
         for decoder_layer in self.layers:
             if self.gradient_checkpointing and self.training:
                 layer_outputs = self._gradient_checkpointing_func(
                     decoder_layer.__call__,
                     hidden_states,
                     attention_mask,
+                    position_embeddings=position_embeddings,
                 )
             else:
                 layer_outputs = decoder_layer(
                     hidden_states,
                     attention_mask,
+                    position_embeddings=position_embeddings,
                 )
             hidden_states = layer_outputs[0]
 
